@@ -1,0 +1,190 @@
+package com.example.calculadoracolaborativa
+
+import android.os.Bundle
+import android.widget.Button
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import kotlin.math.absoluteValue
+
+class MainActivity : AppCompatActivity() {
+
+    // --- Variables de Estado de la Calculadora ---
+    // Representa el valor visible en pantalla
+    private var currentDisplayValue: String = "0"
+
+    // Almacena el primer número antes de un operador
+    private var firstOperand: Double? = null
+
+    // Almacena el operador pendiente (+, -, *, /)
+    private var currentOperator: String? = null
+
+    // Indica si se debe reemplazar la pantalla con el siguiente dígito
+    private var waitingForSecondOperand: Boolean = false
+
+    // Referencia al TextView de la interfaz
+    private lateinit var resultTextView: TextView
+
+    // Lista de IDs de botones numéricos para asignarles el mismo listener
+    private val numberButtonIds = listOf(
+        R.id.button_0, R.id.button_1, R.id.button_2, R.id.button_3, R.id.button_4,
+        R.id.button_5, R.id.button_6, R.id.button_7, R.id.button_8, R.id.button_9
+    )
+
+    // Lista de IDs de botones de operador para asignarles el mismo listener
+    private val operatorButtonIds = listOf(
+        R.id.button_plus, R.id.button_minus, R.id.button_multiply, R.id.button_divide
+    )
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        // 1. Obtener la referencia al TextView
+        resultTextView = findViewById(R.id.result_text_view)
+        updateDisplay() // Mostrar "0" al iniciar
+
+        // 2. Configurar listeners para los botones numéricos
+        numberButtonIds.forEach { id ->
+            findViewById<Button>(id).setOnClickListener {
+                onNumberClick((it as Button).text.toString())
+            }
+        }
+
+        // 3. Configurar listeners para los botones de operador
+        operatorButtonIds.forEach { id ->
+            findViewById<Button>(id).setOnClickListener {
+                onOperatorClick((it as Button).text.toString())
+            }
+        }
+
+        // 4. Configurar listeners para botones especiales
+        findViewById<Button>(R.id.button_decimal).setOnClickListener { onDecimalClick() }
+        findViewById<Button>(R.id.button_ac).setOnClickListener { onClearClick() }
+        findViewById<Button>(R.id.button_plus_minus).setOnClickListener { onPlusMinusClick() }
+        findViewById<Button>(R.id.button_percent).setOnClickListener { onPercentClick() }
+        findViewById<Button>(R.id.button_equals).setOnClickListener { onEqualsClick() }
+    }
+
+    // --- Funciones de Manejo de Eventos (Se llamarán desde onCreate) ---
+
+    // Maneja la pulsación de dígitos (0-9)
+    private fun onNumberClick(digit: String) {
+        if (waitingForSecondOperand) {
+            currentDisplayValue = digit
+            waitingForSecondOperand = false
+        } else {
+            // Evita múltiples ceros iniciales
+            if (currentDisplayValue == "0") {
+                currentDisplayValue = digit
+            } else {
+                currentDisplayValue += digit
+            }
+        }
+        updateDisplay()
+    }
+
+    // Maneja la pulsación de operadores (+, -, *, /)
+    private fun onOperatorClick(operator: String) {
+        val currentValue = currentDisplayValue.toDoubleOrNull() ?: return // Si no es un número, sal
+
+        if (firstOperand == null) {
+            // Primer número introducido
+            firstOperand = currentValue
+        } else if (!waitingForSecondOperand) {
+            // Ya hay un primer operador y se introduce otro, calcular intermedio
+            val result = CalculatorLogic.calculate(firstOperand!!, currentOperator!!, currentValue)
+            firstOperand = result
+            currentDisplayValue = formatResult(result)
+            updateDisplay()
+        }
+
+        currentOperator = operator
+        waitingForSecondOperand = true // Esperar por el segundo número
+    }
+
+    // Maneja el botón de igual (=)
+    private fun onEqualsClick() {
+        if (firstOperand != null && currentOperator != null && !waitingForSecondOperand) {
+            val secondOperand = currentDisplayValue.toDoubleOrNull() ?: return
+
+            val result = CalculatorLogic.calculate(firstOperand!!, currentOperator!!, secondOperand)
+
+            currentDisplayValue = formatResult(result)
+            currentOperator = null
+            firstOperand = null
+            waitingForSecondOperand = true // La siguiente pulsación reemplaza la pantalla
+            updateDisplay()
+        }
+    }
+
+    // Maneja el botón AC (All Clear)
+    private fun onClearClick() {
+        currentDisplayValue = "0"
+        firstOperand = null
+        currentOperator = null
+        waitingForSecondOperand = false
+        updateDisplay()
+    }
+
+    // Maneja el punto decimal (.)
+    private fun onDecimalClick() {
+        if (waitingForSecondOperand) {
+            currentDisplayValue = "0."
+            waitingForSecondOperand = false
+        } else if (!currentDisplayValue.contains(".")) {
+            currentDisplayValue += "."
+        }
+        updateDisplay()
+    }
+
+    // Maneja el cambio de signo (+/-)
+    private fun onPlusMinusClick() {
+        val currentValue = currentDisplayValue.toDoubleOrNull() ?: return
+        currentDisplayValue = formatResult(-currentValue)
+        updateDisplay()
+    }
+
+    // Maneja el porcentaje (%)
+    private fun onPercentClick() {
+        val currentValue = currentDisplayValue.toDoubleOrNull() ?: return
+        currentDisplayValue = formatResult(currentValue / 100.0)
+        updateDisplay()
+        waitingForSecondOperand = true // Después del porcentaje, la próxima pulsación de número limpia
+    }
+
+    // --- Funciones Auxiliares ---
+
+    // Actualiza el TextView con el valor actual
+    private fun updateDisplay() {
+        resultTextView.text = currentDisplayValue
+    }
+
+    // Formatea el resultado para eliminar el .0 si es un entero
+    private fun formatResult(value: Double): String {
+        return if (value % 1 == 0.0) {
+            value.toLong().toString()
+        } else {
+            // Limita la precisión, evitando la notación científica si es posible
+            String.format("%.8f", value).trimEnd('0').trimEnd('.')
+        }
+    }
+}
+
+// ------------------------------------------------------------------
+// **OBJETO DE LÓGICA COLABORATIVA (Aún falta la función de cálculo)**
+// ------------------------------------------------------------------
+object CalculatorLogic {
+    /**
+     * Realiza la operación matemática simple.
+     * Esta función es la que se implementará para la funcionalidad colaborativa.
+     */
+    fun calculate(operand1: Double, operator: String, operand2: Double): Double {
+        return when (operator) {
+            "+" -> operand1 + operand2
+            "-" -> operand1 - operand2
+            "*" -> operand1 * operand2
+            "/" -> if (operand2 != 0.0) operand1 / operand2 else Double.NaN // Manejo de división por cero
+            else -> operand2
+        }
+    }
+}
