@@ -1,0 +1,1234 @@
+package com.example.miappejercicios
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.filled.ListAlt
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import com.example.miappejercicios.ui.theme.MiAppEjerciciosTheme
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
+import kotlinx.coroutines.delay // Importar delay para la simulación del splash screen
+
+// Simulación de recursos (Debe coincidir con tus archivos reales o usa placehold.co)
+// Por simplicidad y para que compile, se asume que existe un drawable genérico
+// Para que esto funcione, debes tener archivos llamados en el proyecto Android real
+// Para este ejemplo, solo usaré un ID que probablemente falle en compilación,
+// pero mantengo la estructura:
+val R = object {
+    object drawable {
+        val estiramiento = android.R.drawable.btn_star_big_on
+        val cycling = android.R.drawable.btn_star_big_on
+        val a20por10 = android.R.drawable.btn_star_big_on
+        val a30por10 = android.R.drawable.btn_star_big_on
+        val a40por20 = android.R.drawable.btn_star_big_on
+        val todoelcuerpo = android.R.drawable.btn_star_big_on
+        val piernas = android.R.drawable.btn_star_big_on
+        val brazosdefinidos = android.R.drawable.btn_star_big_on
+        val beneficios = android.R.drawable.btn_star_big_on
+    }
+}
+
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            MiAppEjerciciosTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    AppEntry() // Punto de entrada que maneja el NavHost
+                }
+            }
+        }
+    }
+}
+
+// ---------------------- NOMBRES DE LAS RUTAS DE NAVEGACIÓN ----------------------
+object Destinations {
+    // Rutas de inicio y registro
+    const val INITIAL_SPLASH_ROUTE = "initial_splash" // El splash inicial (carga)
+    const val REGISTRATION_ROUTE = "registration" // La pantalla de formulario de registro
+    const val ACCEPTANCE_ROUTE = "acceptance/{name}/{age}/{id}/{email}" // Ruta con argumentos
+    const val APP_MAIN_ROUTE = "app_main" // Nueva ruta para la app principal (MainScreen)
+
+    // Rutas internas de la app principal (MainScreen)
+    const val HOME_ROUTE = "home"
+    const val VIDEOS_ROUTE = "videos"
+    const val RUTINA_ROUTE = "rutina"
+    const val MAS_ROUTE = "mas"
+    const val CUENTA_ROUTE = "cuenta"
+    const val MY_TRAINING_ROUTE = "myTraining"
+}
+
+// ---------------------- FUNCIONES DE NAVEGACIÓN PRINCIPAL ----------------------
+
+@Composable
+fun AppEntry() {
+    val navController = rememberNavController()
+    NavHost(
+        navController = navController,
+        startDestination = Destinations.INITIAL_SPLASH_ROUTE, // Inicia en la pantalla de presentación
+    ) {
+        // 1. PANTALLA INICIAL (SPLASH) - Mínimo tiempo de carga
+        composable(Destinations.INITIAL_SPLASH_ROUTE) {
+            InitialSplashScreen(onNavigateToRegistration = {
+                // Navega directamente a la pantalla de registro y limpia la pila
+                navController.navigate(Destinations.REGISTRATION_ROUTE) {
+                    popUpTo(Destinations.INITIAL_SPLASH_ROUTE) { inclusive = true }
+                }
+            })
+        }
+
+        // 2. PANTALLA DE REGISTRO (FORMULARIO)
+        composable(Destinations.REGISTRATION_ROUTE) {
+            RegistrationFormScreen(
+                onAccept = { name, age, id, email ->
+                    // Codificamos el email antes de pasarlo en la URL
+                    val encodedEmail = URLEncoder.encode(email, StandardCharsets.UTF_8.toString())
+                    // Navega a la pantalla de aceptación con los datos como argumentos
+                    navController.navigate("acceptance/$name/$age/$id/$encodedEmail")
+                }
+            )
+        }
+
+        // 3. PANTALLA DE ACEPTACIÓN (MUESTRA DATOS)
+        composable(
+            route = Destinations.ACCEPTANCE_ROUTE,
+            arguments = listOf(
+                navArgument("name") { type = NavType.StringType },
+                navArgument("age") { type = NavType.StringType },
+                navArgument("id") { type = NavType.StringType },
+                navArgument("email") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val name = backStackEntry.arguments?.getString("name") ?: "N/A"
+            val age = backStackEntry.arguments?.getString("age") ?: "N/A"
+            val id = backStackEntry.arguments?.getString("id") ?: "N/A"
+            val email = backStackEntry.arguments?.getString("email") ?: "N/A"
+
+            AcceptanceScreen(
+                name = name,
+                age = age,
+                id = id,
+                email = email,
+                onComplete = {
+                    // Al completar, navega a la aplicación principal y elimina todas las pantallas de registro
+                    navController.navigate(Destinations.APP_MAIN_ROUTE) {
+                        popUpTo(Destinations.INITIAL_SPLASH_ROUTE) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // 4. CONTENEDOR DE LA APP PRINCIPAL (MainScreen)
+        composable(Destinations.APP_MAIN_ROUTE) {
+            MainContentContainer()
+        }
+    }
+}
+
+@Composable
+fun MainContentContainer() {
+    val navController = rememberNavController()
+    Scaffold(
+        bottomBar = {
+            SmartFitBottomNavigation(navController = navController)
+        }
+    ) { paddingValues ->
+        AppNavHost(navController = navController, modifier = Modifier.padding(paddingValues))
+    }
+}
+
+
+// ---------------------- PANTALLAS DE AUTENTICACIÓN ACTUALIZADAS ----------------------
+
+@Composable
+fun InitialSplashScreen(onNavigateToRegistration: () -> Unit) {
+    // Usa LaunchedEffect para simular una pequeña espera (1 segundo) antes de navegar
+    LaunchedEffect(Unit) {
+        delay(1000) // Espera 1 segundo
+        onNavigateToRegistration()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black), // Fondo negro
+        contentAlignment = Alignment.Center
+    ) {
+        // Logo de Smart Fit
+        Icon(
+            imageVector = Icons.Filled.FitnessCenter,
+            contentDescription = "Logo Smart Fit",
+            tint = Color(0xFFFDD835), // Color amarillo Smart Fit
+            modifier = Modifier.size(100.dp)
+        )
+    }
+}
+
+
+@Composable
+fun RegistrationFormScreen(onAccept: (name: String, age: String, id: String, email: String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var age by remember { mutableStateOf("") }
+    var id by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var acceptedTerms by remember { mutableStateOf(false) }
+    val isFormValid = name.isNotBlank() && age.isNotBlank() && id.isNotBlank() && email.isNotBlank() && acceptedTerms
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black) // Fondo negro
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Filled.FitnessCenter,
+            contentDescription = "Logo Smart Fit",
+            tint = Color(0xFFFDD835),
+            modifier = Modifier.size(80.dp).padding(top = 16.dp, bottom = 16.dp)
+        )
+        Text(
+            text = "REGÍSTRATE Y EMPIEZA A ENTRENAR",
+            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+            color = Color.White,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+
+        // Estilo TextField ajustado para fondo negro
+        @Composable
+        fun CustomTextField(value: String, onValueChange: (String) -> Unit, label: String, keyboardType: KeyboardType = KeyboardType.Text) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                label = { Text(label, color = Color.Gray) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFFFDD835),
+                    unfocusedBorderColor = Color.Gray,
+                    cursorColor = Color(0xFFFDD835),
+                    focusedLabelColor = Color(0xFFFDD835),
+                    unfocusedLabelColor = Color.Gray,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    containerColor = Color.DarkGray.copy(alpha = 0.3f)
+                ),
+                keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+            )
+        }
+
+        // 1. Nombre
+        CustomTextField(name, { name = it }, "Nombre Completo")
+
+        // 2. Edad y Cédula
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            CustomTextField(
+                value = age,
+                onValueChange = { age = it.filter { char -> char.isDigit() } },
+                label = "Edad",
+                keyboardType = KeyboardType.Number,
+                modifier = Modifier.weight(1f)
+            )
+            CustomTextField(
+                value = id,
+                onValueChange = { id = it.filter { char -> char.isDigit() } },
+                label = "Cédula de Ciudadanía",
+                keyboardType = KeyboardType.Number,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        // 3. Correo Electrónico
+        CustomTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = "Correo Electrónico",
+            keyboardType = KeyboardType.Email
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // 4. Aceptación de Términos
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { acceptedTerms = !acceptedTerms }
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = acceptedTerms,
+                onCheckedChange = { acceptedTerms = it },
+                colors = CheckboxDefaults.colors(
+                    checkedColor = Color(0xFFFDD835),
+                    uncheckedColor = Color.White
+                )
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Acepto los términos de tratamiento de datos.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White
+            )
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Botón de Aceptar/Registrar
+        Button(
+            onClick = { onAccept(name, age, id, email) },
+            enabled = isFormValid,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFFDD835),
+                disabledContainerColor = Color.LightGray
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+        ) {
+            Text(text = "CREAR MI CUENTA", color = Color.Black, fontWeight = FontWeight.Bold)
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Opción de Iniciar Sesión para usuarios existentes
+        OutlinedButton(
+            onClick = { /* TODO: Implementar navegación a LoginScreen */ },
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+        ) {
+            Text(text = "YA TENGO UNA CUENTA", color = Color.White, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun AcceptanceScreen(name: String, age: String, id: String, email: String, onComplete: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Filled.CheckCircle,
+            contentDescription = "Aceptado",
+            tint = Color.Green,
+            modifier = Modifier.size(100.dp).padding(top = 32.dp)
+        )
+        Text(
+            text = "¡REGISTRO EXITOSO!",
+            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+            color = Color.Black,
+            modifier = Modifier.padding(top = 16.dp, bottom = 32.dp)
+        )
+
+        // Muestra los datos del usuario
+        DataDisplayRow("Nombre:", name)
+        DataDisplayRow("Edad:", age)
+        DataDisplayRow("Cédula:", id)
+        DataDisplayRow("Email:", email)
+
+        Spacer(modifier = Modifier.height(64.dp))
+
+        Text(
+            text = "Bienvenido, $name. Puedes comenzar a explorar tu entrenamiento.",
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 32.dp)
+        )
+
+        Button(
+            onClick = onComplete,
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007bff)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+        ) {
+            Text(text = "COMENZAR MI ENTRENAMIENTO", color = Color.White, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun DataDisplayRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(text = label, fontWeight = FontWeight.Bold, color = Color.Gray)
+        Text(text = value, fontWeight = FontWeight.Medium, color = Color.Black)
+    }
+    Divider()
+}
+
+
+// ---------------------- FUNCIONES COMPOSABLE DE PANTALLAS PRINCIPALES (existentes) ----------------------
+@Composable
+fun AppNavHost(navController: NavHostController, modifier: Modifier = Modifier) {
+    NavHost(
+        navController = navController,
+        startDestination = Destinations.HOME_ROUTE,
+        modifier = modifier
+    ) {
+        composable(Destinations.HOME_ROUTE) { HomeScreen(onNavigateToTraining = { navController.navigate(Destinations.MY_TRAINING_ROUTE) }) }
+        composable(Destinations.VIDEOS_ROUTE) { VideosScreen() }
+        composable(Destinations.RUTINA_ROUTE) { TrainingScreen(onNavigateToTraining = { navController.navigate(Destinations.MY_TRAINING_ROUTE) }) }
+        composable(Destinations.MAS_ROUTE) { MoreScreen() }
+        composable(Destinations.CUENTA_ROUTE) { AccountScreen() }
+        composable(Destinations.MY_TRAINING_ROUTE) { MyTrainingScreen(onBack = { navController.popBackStack() }) }
+    }
+}
+
+@Composable
+fun HomeScreen(modifier: Modifier = Modifier, onNavigateToTraining: () -> Unit) {
+    val semanas = 7
+    val nivelCompromiso = NivelCompromiso.BAJO
+    val entrenamientos = 13
+    val hits = 0
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .background(color = Color.White)
+            .verticalScroll(rememberScrollState())
+    ) {
+        Text(
+            text = "Hola, USUARIO",
+            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "MI ENTRENAMIENTO",
+            style = MaterialTheme.typography.titleSmall,
+            color = Color.Gray
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "57%",
+                style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = "Sesiones: 11/19",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray
+                )
+                LinearProgressIndicator(
+                    progress = 0.57f,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp),
+                    color = Color(0xFFFDD835),
+                    trackColor = Color.LightGray
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onNavigateToTraining),
+            shape = RoundedCornerShape(10.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFFDD835))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.FitnessCenter,
+                    contentDescription = "Entrenamiento",
+                    tint = Color.Black
+                )
+                Text(
+                    text = "Acceder a mi entrenamiento",
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                    contentDescription = "Ir",
+                    tint = Color.Black
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Ver otras opciones de entrenamiento",
+            color = Color.Blue,
+            modifier = Modifier.clickable { /* Acción para ver opciones */ }
+        )
+        TuRutinaSection(semanasConsecutivas = semanas, nivel = nivelCompromiso)
+        ContadoresMensualesSection(entrenamientosCompletados = entrenamientos, hitsCompletados = hits)
+    }
+}
+
+@Composable
+fun TrainingScreen(modifier: Modifier = Modifier, onNavigateToTraining: () -> Unit) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        Text(
+            text = "Entrenamiento",
+            style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onNavigateToTraining),
+            shape = RoundedCornerShape(10.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFFDD835))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.FitnessCenter,
+                    contentDescription = "Entrenamiento",
+                    tint = Color.Black
+                )
+                Text(
+                    text = "Acceder a mi entrenamiento",
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                    contentDescription = "Ir",
+                    tint = Color.Black
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "MÁS OPCIONES DE ENTRENAMIENTO",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            color = Color.Gray
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        TrainingOption(
+            icon = Icons.Filled.Person,
+            text = "Renovar mi evaluación",
+            label = "Novedad"
+        ) {}
+        TrainingOption(
+            icon = Icons.AutoMirrored.Filled.ListAlt,
+            text = "Entrenamientos Especiales (HIT)"
+        ) {}
+        TrainingOption(
+            icon = Icons.Filled.VideoLibrary,
+            text = "Smart Fit Go"
+        ) {}
+        TrainingOption(
+            icon = Icons.Filled.CalendarToday,
+            text = "Horario de clases"
+        ) {}
+        TrainingOption(
+            icon = Icons.Filled.SelfImprovement,
+            text = "Smart Fit Coach"
+        ) {}
+        TrainingOption(
+            icon = Icons.Filled.Refresh,
+            text = "Cambiar entrenamiento"
+        ) {}
+    }
+}
+
+@Composable
+fun AccountScreen(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        Text(
+            text = "USUARIO",
+            style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold)
+        )
+        Text(
+            text = "Matricula 20513762    PLAN Black",
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color.Gray
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = "Objetivo",
+            style = MaterialTheme.typography.titleMedium,
+            color = Color.Gray
+        )
+        Text(
+            text = "Ganar masa muscular",
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Historial de entrenamiento",
+            style = MaterialTheme.typography.titleMedium,
+            color = Color.Gray
+        )
+        Text(
+            text = "Entrené de 2x a 3x a la semana",
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        AccountOption(
+            texto = "Datos de pago",
+            icono = Icons.AutoMirrored.Filled.ListAlt
+        ) {}
+        AccountOption(
+            texto = "Datos personales",
+            icono = Icons.Filled.Person
+        ) {}
+        AccountOption(
+            texto = "Preguntas frecuentes",
+            icono = Icons.Filled.Info
+        ) {}
+        AccountOption(
+            texto = "Documentos",
+            icono = Icons.AutoMirrored.Filled.ListAlt
+        ) {}
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = "Salir de la aplicación",
+            color = Color.Red,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            modifier = Modifier.clickable { /* Acción para salir */ }
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = "Version 4.4.23",
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.Gray,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+    }
+}
+
+@Composable
+fun VideosScreen(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        Text(
+            text = "Smart Fit Go",
+            style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        VideosSection("GENERAL", videos = listOf(
+            VideoItem("Estiramiento", "03 videos", R.drawable.estiramiento),
+            VideoItem("Cycling", "10 videos", R.drawable.cycling),
+        ))
+        VideosSection("HIIT", videos = listOf(
+            VideoItem("20 por 10", "12 videos", R.drawable.a20por10),
+            VideoItem("30 por 10", "18 videos", R.drawable.a30por10),
+            VideoItem("40 por 20", "17 videos", R.drawable.a40por20),
+        ))
+        VideosSection("FUERZA", videos = listOf(
+            VideoItem("Todo el cuerpo", "05 videos", R.drawable.todoelcuerpo),
+            VideoItem("Piernas", "08 videos", R.drawable.piernas),
+            VideoItem("Brazos definidos", "08 videos", R.drawable.brazosdefinidos),
+        ))
+    }
+}
+
+@Composable
+fun MoreScreen(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        Text(
+            text = "Smart Fit Más",
+            style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold)
+        )
+        Text(
+            text = "Descubre servicios y beneficios especiales para ti",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.Gray
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceAround
+        ) {
+            Text(text = "Todos", fontWeight = FontWeight.Bold)
+            Text(text = "Contratados", color = Color.Gray)
+        }
+        Divider(modifier = Modifier.padding(top = 8.dp, bottom = 16.dp))
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
+            shape = RoundedCornerShape(10.dp)
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Image(
+                    painter = painterResource(id = R.drawable.beneficios),
+                    contentDescription = "Beneficios exclusivos",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.4f))
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.Bottom
+                ) {
+                    Text(
+                        text = "Beneficios exclusivos\ncon las mejores marcas",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Button(
+                        onClick = { /* Acción para disfrutar */ },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFDD835))
+                    ) {
+                        Text(text = "Disfruta", color = Color.Black)
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = "Disfruta también",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        MoreOptionCard(
+            title = "Smart Fit Coach - Con Fidelidad",
+            subtitle = "Consulta en línea con un\nespecialista en entrenamiento",
+            icon = Icons.Filled.Person
+        ) {}
+        MoreOptionCard(
+            title = "Smart Fit Coach",
+            subtitle = "Consulta en línea con un\nespecialista en entrenamiento",
+            icon = Icons.Filled.Person
+        ) {}
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MyTrainingScreen(onBack: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+    ) {
+        TopAppBar(
+            title = {
+                Text(text = "Mi entrenamiento", fontWeight = FontWeight.Bold)
+            },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar")
+                }
+            },
+            actions = {
+                IconButton(onClick = { /* Acción para calendario */ }) {
+                    Icon(imageVector = Icons.Filled.CalendarToday, contentDescription = "Calendario")
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.White
+            )
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text(
+                text = "DIVISIONES DE ENTRENAMIENTO",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = Color.Gray,
+                modifier = Modifier.padding(vertical = 16.dp)
+            )
+            TrainingDivisionCard("A", "Hombro, Pectorales, Tríceps")
+            TrainingDivisionCard("B", "Dorsal, Bíceps, Abdomen")
+            TrainingDivisionCard("C", "Piernas")
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Entrenamientos completados",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = Color.Gray,
+                modifier = Modifier.padding(vertical = 16.dp)
+            )
+            TrainingLogItem("3 de agosto", "Entrenamiento B")
+            TrainingLogItem("2 de agosto", "Entrenamiento A")
+            TrainingLogItem("30 de julio", "Entrenamiento C")
+        }
+    }
+}
+
+@Composable
+fun TrainingDivisionCard(letter: String, description: String) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .clickable { /* Acción de click */ },
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.LightGray.copy(alpha = 0.2f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFF007bff)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = letter, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(text = description, style = MaterialTheme.typography.titleMedium)
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                contentDescription = "Ir",
+                tint = Color.Black
+            )
+        }
+    }
+}
+
+@Composable
+fun TrainingLogItem(date: String, training: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column {
+            Text(text = date, fontWeight = FontWeight.Bold)
+            Text(text = training, color = Color.Gray, fontSize = 12.sp)
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+            contentDescription = "Detalle"
+        )
+    }
+    Divider()
+}
+// ---------------------- COMPONENTES REUTILIZABLES ----------------------
+
+@Composable
+fun SmartFitBottomNavigation(navController: NavHostController) {
+    val items = listOf("Inicio", "Videos", "Rutina", "Más", "Cuenta")
+    val icons = listOf(
+        Icons.Filled.Home,
+        Icons.Filled.VideoLibrary,
+        Icons.Filled.FitnessCenter,
+        Icons.Filled.Menu,
+        Icons.Filled.Person
+    )
+    val navRoutes = listOf(
+        Destinations.HOME_ROUTE,
+        Destinations.VIDEOS_ROUTE,
+        Destinations.RUTINA_ROUTE,
+        Destinations.MAS_ROUTE,
+        Destinations.CUENTA_ROUTE
+    )
+    // Se usa currentDestination?.route para obtener la ruta actual
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    NavigationBar(
+        containerColor = Color.White
+    ) {
+        items.forEachIndexed { index, item ->
+            NavigationBarItem(
+                icon = {
+                    Icon(
+                        imageVector = icons[index],
+                        contentDescription = item,
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
+                label = {
+                    Text(
+                        text = item,
+                        fontSize = 10.sp
+                    )
+                },
+                selected = currentRoute == navRoutes[index],
+                onClick = {
+                    navController.navigate(navRoutes[index]) {
+                        // popUpTo se usa para asegurar que al navegar al inicio, las otras pantallas se eliminen del back stack
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        // launchSingleTop evita copias de la misma pantalla en el stack
+                        launchSingleTop = true
+                        // restoreState asegura que se restaure el estado de la pantalla
+                        restoreState = true
+                    }
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = Color.Black,
+                    unselectedIconColor = Color.Gray,
+                    selectedTextColor = Color.Black,
+                    unselectedTextColor = Color.Gray
+                )
+            )
+        }
+    }
+}
+
+
+@Composable
+fun TrainingOption(
+    icon: ImageVector,
+    text: String,
+    label: String? = null,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(imageVector = icon, contentDescription = text, modifier = Modifier.size(24.dp))
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(text = text, style = MaterialTheme.typography.titleMedium)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (label != null) {
+                Card(
+                    shape = RoundedCornerShape(50),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFDD835))
+                ) {
+                    Text(
+                        text = label,
+                        color = Color.Black,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = "Ir")
+        }
+    }
+}
+
+@Composable
+fun AccountOption(texto: String, icono: ImageVector, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(imageVector = icono, contentDescription = texto, modifier = Modifier.size(24.dp))
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(text = texto, style = MaterialTheme.typography.titleMedium)
+        }
+        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = "Ir")
+    }
+}
+
+@Composable
+fun VideosSection(title: String, videos: List<VideoItem>) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+        color = Color.Gray,
+        modifier = Modifier.padding(vertical = 16.dp)
+    )
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        items(videos) { video ->
+            VideoCard(video)
+        }
+    }
+}
+
+@Composable
+fun VideoCard(video: VideoItem) {
+    Card(
+        modifier = Modifier
+            .width(200.dp)
+            .height(150.dp),
+        shape = RoundedCornerShape(10.dp)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Image(
+                painter = painterResource(id = video.imageRes),
+                contentDescription = video.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.4f))
+                    .padding(8.dp),
+                verticalArrangement = Arrangement.Bottom
+            ) {
+                Text(
+                    text = video.title,
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = video.subtitle,
+                    color = Color.White.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    }
+}
+
+data class VideoItem(
+    val title: String,
+    val subtitle: String,
+    val imageRes: Int
+)
+
+@Composable
+fun MoreOptionCard(title: String, subtitle: String, icon: ImageVector, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        shape = RoundedCornerShape(10.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = title, fontWeight = FontWeight.Bold)
+                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            }
+            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = "Ir")
+        }
+    }
+}
+// ---------------------- COMPONENTES DE SOPORTE ----------------------
+
+enum class NivelCompromiso {
+    BAJO, MEDIO, ALTO
+}
+
+@Composable
+fun TuRutinaSection(semanasConsecutivas: Int, nivel: NivelCompromiso) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp)
+    ) {
+        Text(
+            text = "TU RUTINA",
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+            color = Color.Gray,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "$semanasConsecutivas", style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold))
+                Text(text = "Semanas de\nentrenamiento\nconsecutivas", style = MaterialTheme.typography.bodySmall, color = Color.Gray,
+                    textAlign = TextAlign.Center, // Agregado para centrar
+                    modifier = Modifier.padding(top = 4.dp))
+            }
+            NivelCompromisoBar(nivel = nivel)
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = getMensajeNivel(nivel),
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.Black,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+    }
+}
+
+@Composable
+fun NivelCompromisoBar(nivel: NivelCompromiso) {
+    val barColor = when (nivel) {
+        NivelCompromiso.BAJO -> Color.Red
+        NivelCompromiso.MEDIO -> Color.Yellow
+        NivelCompromiso.ALTO -> Color.Green
+    }
+    val progreso = when (nivel) {
+        NivelCompromiso.BAJO -> 0.3f
+        NivelCompromiso.MEDIO -> 0.6f
+        NivelCompromiso.ALTO -> 1.0f
+    }
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = nivel.name, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
+        Text(text = "Compromiso con el entrenamiento", style = MaterialTheme.typography.bodySmall, color = Color.Gray,
+            textAlign = TextAlign.Center, // Agregado para centrar
+            modifier = Modifier.padding(top = 4.dp))
+        LinearProgressIndicator(
+            progress = progreso,
+            modifier = Modifier
+                .width(100.dp)
+                .height(8.dp)
+                .clip(RoundedCornerShape(4.dp)),
+            color = barColor,
+            trackColor = Color.LightGray
+        )
+    }
+}
+
+fun getMensajeNivel(nivel: NivelCompromiso): String {
+    return when (nivel) {
+        NivelCompromiso.BAJO -> "¡Ánimo! El esfuerzo de hoy es la fuerza de mañana."
+        NivelCompromiso.MEDIO -> "¡Vas por buen camino! Sigue así para alcanzar tus metas."
+        NivelCompromiso.ALTO -> "¡Increíble! ¡Sigue así! :D"
+    }
+}
+
+@Composable
+fun ContadoresMensualesSection(entrenamientosCompletados: Int, hitsCompletados: Int) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp)
+    ) {
+        Text(
+            text = "EN EL ÚLTIMO MES",
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+            color = Color.Gray,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceAround
+        ) {
+            ContadorMensual(numero = entrenamientosCompletados, texto = "ENTRENAMIENTOS\nCOMPLETADOS")
+            ContadorMensual(numero = hitsCompletados, texto = "HITS\nCOMPLETADOS")
+        }
+    }
+}
+
+@Composable
+fun ContadorMensual(numero: Int, texto: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text = "$numero", style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold))
+        Text(text = texto, style = MaterialTheme.typography.bodySmall, color = Color.Gray,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 4.dp))
+    }
+}
