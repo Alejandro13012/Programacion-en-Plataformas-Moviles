@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Tema Base de la Aplicación -->
+    <style name="Theme.CalculadoraColaborativa" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- Colores primarios y de acento -->
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorPrimaryVariant">@color/purple_700</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/teal_200</item>
+        <item name="colorSecondaryVariant">@color/teal_700</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
+    </style>
+
+    <!-- Estilo Base para Todos los Botones -->
+    <style name="CalculatorButton" parent="Widget.AppCompat.Button">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_columnWeight">1</item>
+        <item name="android:layout_rowWeight">1</item>
+        <item name="android:textSize">30sp</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:gravity">center</item>
+        <item name="android:layout_margin">6dp</item>
+        <item name="android:backgroundTint">@android:color/transparent</item>
+        <item name="android:textStyle">bold</item>
+        <item name="cornerRadius">100dp</item>
+    </style>
+
+    <!-- Estilo para Botones de Números y Decimales -->
+    <style name="CalculatorButton.Number">
+        <item name="android:backgroundTint">#333333</item> <!-- Gris Oscuro -->
+    </style>
+
+    <!-- Estilo Específico para el Botón Cero (más ancho) -->
+    <style name="CalculatorButton.Number.Zero">
+        <item name="android:layout_columnSpan">2</item>
+        <item name="android:gravity">start|center_vertical</item>
+        <item name="android:paddingStart">35dp</item>
+    </style>
+
+    <!-- Estilo para Botones Operadores (+, -, *, /, =) -->
+    <style name="CalculatorButton.Operator">
+        <item name="android:backgroundTint">#FF9500</item> <!-- Naranja -->
+        <item name="android:textColor">@color/white</item>
+    </style>
+
+    <!-- Estilo para la Fila Superior (AC, +/-, %) -->
+    <style name="CalculatorButton.TopRow">
+        <item name="android:backgroundTint">#AFAFAF</item> <!-- Gris Claro -->
+        <item name="android:textColor">@color/black</item>
+    </style>
+
+</resources>
